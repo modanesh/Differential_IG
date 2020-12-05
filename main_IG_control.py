@@ -1,15 +1,14 @@
-import gym
-from utils import calculate_outputs_and_gradients_steps, gather_observations
-from integrated_gradients import integrated_gradient, mask_diff_ig
-from visualization import plot_feature_vector
-from model_def import *
-import argparse
 import os
+import gym
+import argparse
+from model_def import *
+from visualization import plot_feature_vector
+from integrated_gradients import integrated_gradient, mask_diff_ig
+from utils import calculate_outputs_and_gradients_steps, gather_observations
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='differential-IG')
-    parser.add_argument('--cuda', action='store_true', help='if use the cuda to do the accelartion')
     parser.add_argument('--env_type', type=str, default='inception', help='the type of network')
     parser.add_argument('--input_index', type=str, help='input image index')
     parser.add_argument('--baseline_index', type=str, help='baseline iamge index')
@@ -19,11 +18,14 @@ if __name__ == '__main__':
     parser.add_argument('--env_seed', type=int, default=1, help='environment seed')
     args = parser.parse_args()
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     env_name = args.env
     qbn_sizes = str((args.qbn_sizes[0], args.qbn_sizes[1])).replace(" ", "")
-    model_path = "../results/Classic_Control/" + env_name + "/gru_" + args.gru_size + "_hx_" + str(qbn_sizes) + "_bgru/model.p"
+    model_path = "./inputs/" + env_name + "/model_bgru_" + args.gru_size + "_" + str(qbn_sizes) + ".p"
 
-    saved_observations, saved_observations_x, saved_observations_tanh = gather_observations(env_name, int(args.gru_size), args.qbn_sizes[0], args.qbn_sizes[1], model_path, episodes=1, cuda=args.cuda, env_type=args.env_type)
+    saved_observations = gather_observations(env_name, int(args.gru_size), args.qbn_sizes[0], args.qbn_sizes[1],
+                                             model_path, device, episodes=1, env_type=args.env_type)
 
     if not os.path.exists('results/'):
         os.mkdir('results/')
@@ -49,12 +51,14 @@ if __name__ == '__main__':
     model.gru_net.load_state_dict(pretrained_gru_dict)
 
     model.eval()
-    if args.cuda:
-        model.cuda()
+    model.to(device)
     input_image = saved_observations[int(args.input_index)]
-    baseline_image = saved_observations[int(args.baseline_index)]
-    ii_f, ii_x, ii_q = model(input_image.cuda(), inspect=False)
-    bi_f, bi_x, bi_q = model(baseline_image.cuda(), inspect=False)
-    attributions, unmasked_attributions = integrated_gradient(input_image, model, calculate_outputs_and_gradients_steps, ii_x, ii_q, steps=10, cuda=args.cuda, baseline=baseline_image, results_path=results_path, feed_tTanh=True, feature_type='vector', env_type=args.env_type)
+    baseline_image = saved_observations[int(args.input_index)]
+    ii_f, ii_x, ii_q = model(input_image.to(device), inspect=False)
+    bi_f, bi_x, bi_q = model(baseline_image.to(device), inspect=False)
+    attributions, unmasked_attributions = integrated_gradient(input_image, model, calculate_outputs_and_gradients_steps,
+                                                              ii_x, ii_q, steps=10, device=device, baseline=baseline_image,
+                                                              results_path=results_path, feed_tTanh=True, feature_type='vector',
+                                                              env_type=args.env_type)
     input_image_path = os.path.join("./inputs/", args.env, args.input_index + ".jpg")
     plot_feature_vector(attributions, results_path, args.env)

@@ -59,7 +59,7 @@ def plot_feature_vector(attributions, results_path, env_name):
     plt.colorbar()
     plt.ylabel("Input Features", fontsize=12, fontweight='bold')
     plt.gca().axes.get_xaxis().set_visible(False)
-    labels = [item.get_text() for item in ax.get_yticklabels()]
+    labels = ["" for _ in range(len(attributions))]
 
     if env_name == 'Acrobot-v1':
         # labels for Acrobot's features

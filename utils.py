@@ -9,22 +9,16 @@ import torch.nn.functional as F
 from env_wrapper import atari_wrapper
 
 
-def calculate_outputs_and_gradients_steps(inputs, model, original_image_x, input_before_quantized, cuda=False, grad_clip=1, feed_tTanh=False):
+def calculate_outputs_and_gradients_steps(inputs, model, original_image_x, input_before_quantized, device, grad_clip=1, feed_tTanh=False):
     gradients = []
     for i in range(len(inputs)):
         bits_gradients = []
         input = torch.tensor(inputs[i], requires_grad=True)
-        if cuda:
-            output_c, output_x, output_before_quantized = model(input.cuda())
-        else:
-            output_c, output_x, output_before_quantized = model(input)
+        output_c, output_x, output_before_quantized = model(input.to(device))
         for j in range(len(output_x[0])):
             model.zero_grad()
             if feed_tTanh:
-                if cuda:
-                    loss = nn.MSELoss()(output_before_quantized[0][j], input_before_quantized[0][j].cuda())
-                else:
-                    loss = nn.MSELoss()(output_before_quantized[0][j], input_before_quantized[0][j])
+                loss = nn.MSELoss()(output_before_quantized[0][j], input_before_quantized[0][j].to(device))
             else:
                 loss = nn.MSELoss()(output_x[0][j], original_image_x[0][j])
             loss.backward(retain_graph=True)
@@ -66,12 +60,10 @@ def plot_GIs_together(path, IGs):
     fig.clf()
 
 
-def gather_observations(env_name, gru_size, bhx_size, ox_size, bgru_net_path, episodes=1, cuda=False, env_type='atari'):
-    if os.path.exists('./results/' + env_type + '/' + str(env_name) + '/observations.pt'):
-        observations = torch.load('./results/' + env_type + '/' + str(env_name) + '/observations.pt')
-        observations_x = torch.load('./results/' + env_type + '/' + str(env_name) + '/observations_x.pt')
-        observations_tanh = torch.load('./results/' + env_type + '/' + str(env_name) + '/observations_tanh.pt')
-        return observations, observations_x, observations_tanh
+def gather_observations(env_name, gru_size, bhx_size, ox_size, bgru_net_path, device, episodes=1, env_type='atari'):
+    if os.path.exists('./inputs/' + str(env_name) + '/observations.pt'):
+        observations = torch.load('./inputs/' + str(env_name) + '/observations.pt', map_location=device)
+        return observations
 
     if env_type == 'atari':
         env = atari_wrapper(env_name)
@@ -98,11 +90,8 @@ def gather_observations(env_name, gru_size, bhx_size, ox_size, bgru_net_path, ep
     bgru_net.eval()
     max_actions = 10000
     random.seed(0)
-    total_actions = int(env.action_space.n)
     x = set([])
     observations = []
-    observations_x = []
-    observations_tanh = []
     with torch.no_grad():
         for ep in range(episodes):
             done = False
@@ -126,8 +115,6 @@ def gather_observations(env_name, gru_size, bhx_size, ox_size, bgru_net_path, ep
                 critic, logit, next_state, (next_state_c, next_state_x), (_, obs_x, obs_tanh) = bgru_net((obs, curr_state),
                                                                                                     inspect=True)
                 observations.append(obs)
-                observations_x.append(obs_x)
-                observations_tanh.append(obs_tanh)
                 prob = F.softmax(logit, dim=1)
                 next_action = int(prob.max(1)[1].cpu().data.numpy())
 
@@ -146,12 +133,5 @@ def gather_observations(env_name, gru_size, bhx_size, ox_size, bgru_net_path, ep
                 ep_reward += reward
                 x.add(''.join([str(int(i)) for i in next_state.cpu().data.numpy()[0]]))
 
-    # find index of the start_state
-    start_state = bgru_net.init_hidden()
-    if cuda:
-        start_state = start_state.cuda()
-    start_state_x = bgru_net.state_encode(start_state).data.cpu().numpy()[0]
-    torch.save(observations, './results/' + env_type + '/' + str(env_name) + '/observations.pt')
-    torch.save(observations_x, './results/' + env_type + '/' + str(env_name) + '/observations_x.pt')
-    torch.save(observations_tanh, './results/' + env_type + '/' + str(env_name) + '/observations_tanh.pt')
-    return observations, observations_x, observations_tanh
+    torch.save(observations, './inputs/' + str(env_name) + '/observations.pt')
+    return observations

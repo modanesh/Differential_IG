@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def integrated_gradient(inputs, model, predict_and_gradients, original_image_x, before_Ttanh_output, steps, cuda, baseline, results_path, feed_tTanh=True, feature_type='image', env_type='atari'):
+def integrated_gradient(inputs, model, predict_and_gradients, original_image_x, before_Ttanh_output, steps, device, baseline, results_path, feed_tTanh=True, feature_type='image', env_type='atari'):
     scaled_inputs = []
     for k in range(steps + 1):
         step_k_image = baseline + (float(k) / steps) * (inputs - baseline)
@@ -12,7 +12,7 @@ def integrated_gradient(inputs, model, predict_and_gradients, original_image_x, 
     if env_type == 'atari':
         plot_inputs_together(results_path, scaled_inputs)
 
-    grads = predict_and_gradients(scaled_inputs, model, original_image_x, before_Ttanh_output, cuda=cuda, feed_tTanh=feed_tTanh)
+    grads = predict_and_gradients(scaled_inputs, model, original_image_x, before_Ttanh_output, device, feed_tTanh=feed_tTanh)
     avg_grads = np.average(grads, axis=0)
     if feature_type == 'image':
         avg_grads = np.transpose(avg_grads, (0, 2, 3, 1))
@@ -21,8 +21,7 @@ def integrated_gradient(inputs, model, predict_and_gradients, original_image_x, 
         if feature_type == 'image':
             integrated_grad.append((inputs.reshape(80, 80, 1) - baseline.reshape(80, 80, 1)).cpu().numpy() * avg_grads[j])
         elif feature_type == 'vector':
-            integrated_grad.append(
-                (inputs.reshape(inputs.shape[1], inputs.shape[0]) - baseline.reshape(baseline.shape[1], baseline.shape[0])).cpu().numpy() * avg_grads[j].reshape(baseline.shape[1], baseline.shape[0]))
+            integrated_grad.append((inputs.reshape(inputs.shape[1], inputs.shape[0]) - baseline.reshape(baseline.shape[1], baseline.shape[0])).cpu().numpy() * avg_grads[j].reshape(baseline.shape[1], baseline.shape[0]))
     avg_intgrads = np.array(integrated_grad)
     avg_grads = np.array(avg_grads)
     return avg_intgrads, avg_grads
