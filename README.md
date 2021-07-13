@@ -1,6 +1,6 @@
 # Differential Integrated Gradient
 
-This is the implementation of the differential saliency method used in "[Understanding Finite-State Representations of Recurrent Policy Networks](https://arxiv.org/abs/2006.03745)", accepted to the *Extending Explainable AI Beyond Deep Models and Classifiers* workshop at the *International Conference on Machine Learning* **(ICML)** 2020. 
+This is the implementation of the differential saliency method used in "[Re-understanding Finite-State Representations of Recurrent Policy Networks](https://arxiv.org/abs/2006.03745)", accepted to the **International Conference on Machine Learning (ICML) 2021**. 
 
 ## Installation
 * Python 3.5+
@@ -33,10 +33,12 @@ Results will be saved into the ```results``` folder. In the repo, we have alread
 ## Citation
 If you find it useful in your research, please cite it with:
 ```
-@article{danesh2020understanding,
-  title={Understanding Finite-State Representations of Recurrent Policy Networks},
+@inproceedings{danesh2021re,
+  title={Re-understanding Finite-State Representations of Recurrent Policy Networks},
   author={Danesh, Mohamad H and Koul, Anurag and Fern, Alan and Khorram, Saeed},
-  journal={arXiv preprint arXiv:2006.03745},
-  year={2020}
+  booktitle={International Conference on Machine Learning},
+  pages={2388--2397},
+  year={2021},
+  organization={PMLR}
 }
 ```
