@@ -12,7 +12,7 @@ Pillow==8.0.1
 pyglet==1.5.0
 pyparsing==2.4.7
 python-dateutil==2.8.1
-scipy==1.1.0
+scipy==1.10.0
 six==1.15.0
 torch==1.13.1
 typing-extensions==3.7.4.3
